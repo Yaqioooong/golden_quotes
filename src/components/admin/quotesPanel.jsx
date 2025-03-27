@@ -1,6 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -48,7 +49,9 @@ const formSchema = z.object({
     srcChapter: z.string().min(1, "章节不能为空"),
 });
 
-export default function QuotesPanel({ bookId }) {
+export default function QuotesPanel() {
+    const searchParams = useSearchParams();
+    const bookId = searchParams.get('bookId');
     const [quotes, setQuotes] = useState([]);
     const [book, setBook] = useState(null);
     const [open, setOpen] = useState(false);
@@ -70,30 +73,85 @@ export default function QuotesPanel({ bookId }) {
     const [totalPages, setTotalPages] = useState(1);
     const pageSize = 10;
 
-    useEffect(() => {
-        // 获取金句列表
-        fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${currentPage}&pageSize=${pageSize}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        })
-            .then(response => response.json())
-            .then(response => {
-                if (response.success && response.data) {
-                    setQuotes(response.data.quotesList.records || []);
-                    setTotalPages(response.data.quotesList.pages || 1);
-                    setBook({
-                        bookName: response.data.bookName,
-                        author: response.data.author
-                    });
-                }
+    const QuoteContent = () => {
+        useEffect(() => {
+            if (!bookId) return;
+            // 获取金句列表
+            fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${currentPage}&pageSize=${pageSize}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
             })
-            .catch(error => console.error('Error fetching quotes:', error));
-    }, [bookId, currentPage]);
+                .then(response => response.json())
+                .then(response => {
+                    if (response.success && response.data) {
+                        setQuotes(response.data.quotesList.records || []);
+                        setTotalPages(response.data.quotesList.pages || 1);
+                        setBook({
+                            bookName: response.data.bookName,
+                            author: response.data.author
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching quotes:', error));
+        }, [bookId, currentPage]);
+
+        return (
+            <div className="backdrop-blur-sm bg-white/50 rounded-lg overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[75%] text-center">金句内容</TableHead>
+                            <TableHead className="w-[10%]">章节</TableHead>
+                            <TableHead className="w-[15%] text-center">操作</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {quotes.length > 0 ? (
+                            quotes.map((quote) => (
+                                <TableRow key={quote.id}>
+                                    <TableCell className="font-medium">{quote.content}</TableCell>
+                                    <TableCell>{quote.srcChapter || '未标注'}</TableCell>
+                                    <TableCell className="text-left">
+                                        <div className="flex justify-end gap-2">
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => handleEdit(quote)}
+                                            >
+                                                编辑
+                                            </Button>
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setQuoteToDelete(quote);
+                                                    setDeleteDialogOpen(true);
+                                                }}
+                                            >
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={3} className="text-center text-gray-500">
+                                    暂无金句数据
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        );
+    };
 
     const onSubmit = async (values) => {
+        if (!bookId) return;
         try {
             const url = editingQuote
                 ? `${apiUrl}/system/quotes/update`
@@ -113,9 +171,7 @@ export default function QuotesPanel({ bookId }) {
 
             const data = await response.json();
             if (data.success) {
-                // 重置页码到第一页
                 setCurrentPage(1);
-                // 刷新金句列表
                 const quotesResponse = await fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=1&pageSize=${pageSize}`, {
                     method: 'GET',
                     headers: {
@@ -129,7 +185,6 @@ export default function QuotesPanel({ bookId }) {
                     setTotalPages(quotesData.data.quotesList.pages || 1);
                 }
                 
-                // 重置表单并关闭对话框
                 form.reset();
                 setOpen(false);
                 setEditingQuote(null);
@@ -155,7 +210,7 @@ export default function QuotesPanel({ bookId }) {
     };
 
     const handleDelete = async () => {
-        if (!quoteToDelete) return;
+        if (!quoteToDelete || !bookId) return;
 
         try {
             const response = await fetch(`${apiUrl}/system/quotes/delete`, {
@@ -171,9 +226,7 @@ export default function QuotesPanel({ bookId }) {
 
             const data = await response.json();
             if (data.code === 200) {
-                // 重置页码到第一页
                 setCurrentPage(1);
-                // 刷新金句列表
                 const quotesResponse = await fetch(`${apiUrl}/system/quotes/list?bookId=${bookId}&page=1&pageSize=${pageSize}`, {
                     method: 'GET',
                     headers: {
@@ -209,6 +262,10 @@ export default function QuotesPanel({ bookId }) {
             });
         }
     };
+
+    if (!bookId) {
+        return <div className="text-center text-gray-500">请选择一本书</div>;
+    }
 
     return (
         <main className="flex-1 w-full max-w-5xl mx-auto mt-4 mb-8 overflow-y-auto h-[calc(100vh-2rem)]">
@@ -272,89 +329,44 @@ export default function QuotesPanel({ bookId }) {
                     </Dialog>
                 </div>
 
-                <div className="backdrop-blur-sm bg-white/50 rounded-lg overflow-hidden">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[75%] text-center">金句内容</TableHead>
-                                <TableHead className="w-[10%]">章节</TableHead>
-                                <TableHead className="w-[15%] text-center">操作</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {quotes.length > 0 ? (
-                                quotes.map((quote) => (
-                                    <TableRow key={quote.id}>
-                                        <TableCell className="font-medium">{quote.content}</TableCell>
-                                        <TableCell>{quote.srcChapter || '未标注'}</TableCell>
-                                        <TableCell className="text-left">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="primary"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(quote)}
-                                                >
-                                                    编辑
-                                                </Button>
-                                                <Button
-                                                    variant="primary"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setQuoteToDelete(quote);
-                                                        setDeleteDialogOpen(true);
-                                                    }}
-                                                >
-                                                    删除
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-gray-500">
-                                        暂无金句数据
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                    
-                </div>
+                <Suspense fallback={<div className="text-center py-4">加载中...</div>}>
+                    <QuoteContent />
+                </Suspense>
+
                 <div className="flex items-center justify-between px-4 py-3 pb-6">
-                        <div className="flex items-center gap-2">
-                            <Pagination>
-                                <PaginationContent>
-                                    <PaginationItem>
-                                        <PaginationPrevious
-                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                            disabled={currentPage === 1}
-                                        />
+                    <div className="flex items-center gap-2">
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    />
+                                </PaginationItem>
+                                {generatePagination(currentPage, totalPages).map((page, index) => (
+                                    <PaginationItem key={index}>
+                                        {page === '...' ? (
+                                            <PaginationEllipsis />
+                                        ) : (
+                                            <PaginationLink
+                                                isActive={page === currentPage}
+                                                onClick={() => setCurrentPage(page)}
+                                            >
+                                                {page}
+                                            </PaginationLink>
+                                        )}
                                     </PaginationItem>
-                                    {generatePagination(currentPage, totalPages).map((page, index) => (
-                                        <PaginationItem key={index}>
-                                            {page === '...' ? (
-                                                <PaginationEllipsis />
-                                            ) : (
-                                                <PaginationLink
-                                                    isActive={page === currentPage}
-                                                    onClick={() => setCurrentPage(page)}
-                                                >
-                                                    {page}
-                                                </PaginationLink>
-                                            )}
-                                        </PaginationItem>
-                                    ))}
-                                    <PaginationItem>
-                                        <PaginationNext
-                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                            disabled={currentPage === totalPages}
-                                        />
-                                    </PaginationItem>
-                                </PaginationContent>
-                            </Pagination>
-                        </div>
+                                ))}
+                                <PaginationItem>
+                                    <PaginationNext
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage === totalPages}
+                                    />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
                     </div>
+                </div>
             </div>
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

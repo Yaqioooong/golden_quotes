@@ -11,7 +11,7 @@ export default function AdminQuotesPage() {
       <Suspense fallback={<div>Loading...</div>}>
         <div className="px-4 lg:px-6">
           <h1 className="text-xl font-semibold mb-4">金句管理</h1>
-          <QuotesPanel bookId={useSearchParams().get('bookId')} />
+          <QuotesPanel />
         </div>
       </Suspense>
     </AdminLayout>
