@@ -40,6 +40,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
+import { get, post } from "@/lib/request";
 
 const formSchema = z.object({
     bookName: z.string().min(1, "书名不能为空"),
@@ -70,13 +71,7 @@ export default function AdminPanel() {
     const pageSize = 10;
 
     useEffect(() => {
-        fetch(`${apiUrl}/api/v1/books/public/list?page=${currentPage}&pageSize=${pageSize}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        })
+        get(`${apiUrl}/api/v1/books/public/list?page=${currentPage}&pageSize=${pageSize}`)
             .then(response => response.json())
             .then(response => {
                 if (response.success && response.data) {
@@ -89,34 +84,14 @@ export default function AdminPanel() {
 
     const onSubmit = async (values) => {
         try {
-            // 获取 satoken
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            
-            const headers = { 
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-            
-            const response = await fetch(`${apiUrl}/api/v1/books/admin/add`, {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-                body: JSON.stringify(values)
-            });
+            const response = await post(`${apiUrl}/api/v1/books/admin/add`, values);
 
             const data = await response.json();
             if (data.success) {
                 // 重置页码到第一页
                 setCurrentPage(1);
                 // 刷新书籍列表
-                const booksResponse = await fetch(`${apiUrl}/api/v1/books/public/list?page=1&pageSize=${pageSize}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-                });
+                const booksResponse = await get(`${apiUrl}/api/v1/books/public/list?page=1&pageSize=${pageSize}`);
                 const booksData = await booksResponse.json();
                 if (booksData.success && booksData.data) {
                     setBooks(booksData.data.records || []);

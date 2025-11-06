@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { get, post } from "@/lib/request";
 import {
     Table,
     TableBody,
@@ -60,7 +61,8 @@ export default function QuotesPanel() {
     const [quoteToDelete, setQuoteToDelete] = useState(null);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     const { toast } = useToast();
-
+    const [tokenName, setTokenName] = useState('');
+    const [tokenValue, setTokenValue] = useState('');
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -73,30 +75,41 @@ export default function QuotesPanel() {
     const [totalPages, setTotalPages] = useState(1);
     const pageSize = 10;
 
-    const QuoteContent = () => {
-        useEffect(() => {
+    useEffect(() => {
+        // 只在客户端访问localStorage
+        if (typeof window !== 'undefined') {
+            setTokenName(localStorage.getItem('tokenName') || '');
+            setTokenValue(localStorage.getItem('tokenValue') || '');
+        }
+    }, []);
+
+    useEffect(() => {
+        const fetchQuotes = async () => {
             if (!bookId) return;
-            // 获取金句列表
-            fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${currentPage}&pageSize=${pageSize}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            })
-                .then(response => response.json())
-                .then(response => {
-                    if (response.success && response.data) {
-                        setQuotes(response.data.quotesList.records || []);
-                        setTotalPages(response.data.quotesList.pages || 1);
-                        setBook({
-                            bookName: response.data.bookName,
-                            author: response.data.author
-                        });
-                    }
-                })
-                .catch(error => console.error('Error fetching quotes:', error));
-        }, [bookId, currentPage]);
+            try {
+                const response = await get(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${currentPage}&pageSize=${pageSize}`);
+                const data = await response.json();
+                if (data.success && data.data) {
+                    setQuotes(data.data.quotesList.records || []);
+                    setTotalPages(data.data.quotesList.pages || 1);
+                    setBook({
+                        bookName: data.data.bookName,
+                        author: data.data.author
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching quotes:', error);
+                toast({
+                    variant: "destructive",
+                    title: "获取金句列表失败",
+                    description: "请稍后重试",
+                });
+            }
+        };
+        fetchQuotes();
+    }, [bookId, currentPage, apiUrl]);
+
+    const QuoteContent = () => {
 
         return (
             <div className="backdrop-blur-sm bg-white/50 rounded-lg overflow-hidden">
@@ -154,31 +167,18 @@ export default function QuotesPanel() {
         if (!bookId) return;
         try {
             const url = editingQuote
-                ? `${apiUrl}/system/quotes/update`
-                : `${apiUrl}/system/quotes/add`;
+                ? `${apiUrl}/api/v1/quotes/admin/update`
+                : `${apiUrl}/api/v1/quotes/admin/add`;
             const body = editingQuote
                 ? { ...values, id: editingQuote.id }
                 : { ...values, bookId: bookId };
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify(body)
-            });
+            const response = await post(url, body);
 
             const data = await response.json();
             if (data.success) {
                 setCurrentPage(1);
-                const quotesResponse = await fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=1&pageSize=${pageSize}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-                });
+                const quotesResponse = await get(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=1&pageSize=${pageSize}`);
                 const quotesData = await quotesResponse.json();
                 if (quotesData.success && quotesData.data) {
                     setQuotes(quotesData.data.quotesList.records || []);
@@ -196,7 +196,7 @@ export default function QuotesPanel() {
                 toast({
                     variant: "destructive",
                     title: "操作失败",
-                    description: data.msg || "请稍后重试",
+                    description: data.message || "请稍后重试",
                 });
             }
         } catch (error) {
@@ -213,29 +213,16 @@ export default function QuotesPanel() {
         if (!quoteToDelete || !bookId) return;
 
         try {
-            const response = await fetch(`${apiUrl}/system/quotes/delete`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    id: quoteToDelete.id
-                })
+            const response = await post(`${apiUrl}/api/v1/quotes/admin/delete`, {
+                id: quoteToDelete.id
             });
 
             const data = await response.json();
-            if (data.code === 200) {
+            if (data.success) {
                 setCurrentPage(1);
-                const quotesResponse = await fetch(`${apiUrl}/system/quotes/list?bookId=${bookId}&page=1&pageSize=${pageSize}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-                });
+                const quotesResponse = await get(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=1&pageSize=${pageSize}`);
                 const quotesData = await quotesResponse.json();
-                if (quotesData.code === 200 && quotesData.data) {
+                if (quotesData.success && quotesData.data) {
                     setQuotes(quotesData.data.quotesList.records || []);
                     setTotalPages(quotesData.data.quotesList.pages || 1);
                 }
@@ -250,7 +237,7 @@ export default function QuotesPanel() {
                 toast({
                     variant: "destructive",
                     title: "删除失败",
-                    description: data.msg || "请稍后重试",
+                    description: data.message || "请稍后重试",
                 });
             }
         } catch (error) {

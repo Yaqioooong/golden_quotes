@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/common/logo';
 import { encryptAES } from '@/lib/crypto';
+import { get, post } from '@/lib/request';
 
 export default function LoginPage() {
     const [quoteData, setQuoteData] = useState(null);
@@ -22,10 +23,17 @@ export default function LoginPage() {
         const fetchDailyQuote = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`${apiUrl}/api/v1/quotes/public/daily`);
+                const response = await get(`/api/v1/quotes/public/daily`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
+                // 检查响应内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('服务器返回了无效的响应格式');
+                }
+                
                 const data = await response.json();
                 if (data.success && data.data) {
                     setQuoteData(data.data);
@@ -62,17 +70,17 @@ export default function LoginPage() {
 
         try {
             const encryptedPassword = encryptAES(formData.password);
-            const response = await fetch(`${apiUrl}/admin/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: formData.username,
-                    password: encryptedPassword,
-                    rememberMe: formData.rememberMe
-                })
+            const response = await post(`${apiUrl}/admin/login`, {
+                username: formData.username,
+                password: encryptedPassword,
+                rememberMe: formData.rememberMe
             });
+
+            // 检查响应内容类型
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('服务器返回了无效的响应格式');
+            }
 
             const data = await response.json();
 
@@ -92,8 +100,8 @@ export default function LoginPage() {
                     localStorage.removeItem('rememberedUsername');
                 }
                 
-                // 登录成功，跳转到书籍页面
-                router.push('/books');
+                // 登录成功，跳转到管理后台
+                router.push('/admin');
             }
 
 

@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import QuoteCard from "@/components/quotes/quoteCard";
 import { ArrowLeft } from "lucide-react";
+import { get } from "@/lib/request";
 
 export default function QuotesClient() {
     const router = useRouter();
@@ -34,20 +35,7 @@ export default function QuotesClient() {
         if (!bookId || !isLoggedIn) return;
         
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (tokenName && tokenValue) {
-                headers[tokenName] = tokenValue;
-            }
-            
-            const response = await fetch(`${apiUrl}/api/v1/userFavorites/list?bookId=${bookId}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include'
-            });
+            const response = await get(`${apiUrl}/api/v1/userFavorites/list?bookId=${bookId}`);
             const data = await response.json();
             
             if (data.success && data.data && data.data.items) {
@@ -65,19 +53,7 @@ export default function QuotesClient() {
         
         setIsLoading(true);
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (tokenName && tokenValue) {
-                headers[tokenName] = tokenValue;
-            }
-            const response = await fetch(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${page}&pageSize=${pageSize}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include'
-            });
+            const response = await get(`${apiUrl}/api/v1/quotes/public/list?bookId=${bookId}&page=${page}&pageSize=${pageSize}`);
             const data = await response.json();
             
             if (data.success && data.data) {

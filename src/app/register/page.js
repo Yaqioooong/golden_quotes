@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/common/logo';
+import { get } from '@/lib/request';
 
 export default function RegisterPage() {
     const [quoteData, setQuoteData] = useState(null);
@@ -22,7 +23,7 @@ export default function RegisterPage() {
         const fetchDailyQuote = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`${apiUrl}/api/v1/quotes/public/daily`);
+                const response = await get(`${apiUrl}/api/v1/quotes/public/daily`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }

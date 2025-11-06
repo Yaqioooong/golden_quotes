@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, Heart, BookMarked } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { get } from "@/lib/request";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,28 +13,58 @@ export default function Dashboard() {
     totalFavorites: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchStats = async () => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
       try {
-        // 这里应该是从API获取统计数据
-        // 以下是模拟数据
-        setStats({
-          totalBooks: 42,
-          totalUsers: 128,
-          totalQuotes: 567,
-          totalFavorites: 1024,
-        });
-        setLoading(false);
+        setLoading(true);
+        
+        const response = await get(`${apiUrl}/api/v1/admin/admin/dashboard`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          setStats({
+            totalBooks: data.data.bookCount,
+            totalUsers: data.data.userCount,
+            totalQuotes: data.data.quotesCount,
+            totalFavorites: data.data.totalFavorites,
+          });
+        } else {
+          toast({
+                variant: "destructive",
+                title: "获取系统统计失败",
+                description: data.message || "获取数据失败",
+            });
+        }
       } catch (error) {
         console.error("Error fetching stats:", error);
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "获取系统统计失败",
+          description: "网络错误，请稍后重试",
+        });
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
-  }, []);
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight">系统概览</h2>
+        <div className="text-red-500 p-4 bg-red-50 rounded-md">
+          错误: {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -117,4 +149,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-} 
+}

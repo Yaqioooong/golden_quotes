@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Heart, Share2, Download, Copy, X, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import html2canvas from "html2canvas";
+import { post } from "@/lib/request";
 import Logo from "../common/logo";
 
 export default function QuoteCard({ quote, chapter, id, likes: initialLikes, isFavorite: initialIsFavorite, isLoggedIn, onFavoriteChange, bookName, author }) {
@@ -53,25 +54,12 @@ export default function QuoteCard({ quote, chapter, id, likes: initialLikes, isF
     const sendFavoriteRequest = async (newFavoriteStatus) => {
         setIsLoading(true);
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            
-            const headers = { 
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-            
             // 使用新的API接口
             const endpoint = newFavoriteStatus 
                 ? `${apiUrl}/api/v1/userFavorites/add`
                 : `${apiUrl}/api/v1/userFavorites/remove`;
                 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ quoteId: id }),
-                credentials: 'include'
-            });
+            const response = await post(endpoint, { quoteId: id });
             const data = await response.json();
             
             if (data.success) {

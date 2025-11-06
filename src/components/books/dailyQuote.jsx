@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { get } from "@/lib/request";
 
 export default function DailyQuote() {
   const [quoteData, setQuoteData] = useState(null);
@@ -13,7 +14,7 @@ export default function DailyQuote() {
   useEffect(() => {
     const fetchDailyQuote = async () => {
       try {
-        const response = await fetch(`${apiUrl}/api/v1/quotes/public/daily`);
+        const response = await get(`${apiUrl}/api/v1/quotes/public/daily`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

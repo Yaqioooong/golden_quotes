@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react";
 import BookCard from "@/components/books/bookCard";
+import { get } from "@/lib/request";
 
 export default function BooksShelf() {
     const [books, setBooks] = useState([]);
@@ -33,13 +34,8 @@ export default function BooksShelf() {
             page: currentPage,
             pageSize: 10
         });
-        fetch(`${apiUrl}/api/v1/books/public/list?${params}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        })
+        
+        get(`${apiUrl}/api/v1/books/public/list?${params}`)
             .then(async response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

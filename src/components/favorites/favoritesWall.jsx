@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import QuoteCard from "@/components/quotes/quoteCard";
 import { ArrowLeft, Heart } from "lucide-react";
+import { get } from "@/lib/request";
 
 export default function FavoritesWall() {
     const router = useRouter();
@@ -32,23 +33,15 @@ export default function FavoritesWall() {
         try {
             const tokenName = localStorage.getItem('tokenName');
             const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (tokenName && tokenValue) {
-                headers[tokenName] = tokenValue;
-            } else {
+            
+            if (!tokenName || !tokenValue) {
                 // 未登录，跳转到登录页
                 router.push('/login');
                 return;
             }
             
             // 使用新的API接口获取收藏列表
-            const response = await fetch(`${apiUrl}/api/v1/userFavorites/list?page=${page}&pageSize=${pageSize}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include'
-            });
+            const response = await get(`${apiUrl}/api/v1/userFavorites/list?page=${page}&pageSize=${pageSize}`);
             const data = await response.json();
             
             if (data.success && data.data) {
@@ -145,4 +138,4 @@ export default function FavoritesWall() {
             )}
         </div>
     );
-} 
+}

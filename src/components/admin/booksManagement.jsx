@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { get, post } from "@/lib/request";
 import {
     Table,
     TableBody,
@@ -78,20 +79,7 @@ export default function BooksManagement() {
 
     const fetchBooks = async () => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-
-            const response = await fetch(`${apiUrl}/api/v1/books/public/list?page=${currentPage}&pageSize=${pageSize}${searchTerm ? `&search=${searchTerm}` : ''}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include'
-            });
-
+            const response = await get(`${apiUrl}/api/v1/books/public/list?page=${currentPage}&pageSize=${pageSize}${searchTerm ? `&search=${searchTerm}` : ''}`);
             const data = await response.json();
             if (data.success && data.data) {
                 setBooks(data.data.records || []);
@@ -109,21 +97,7 @@ export default function BooksManagement() {
 
     const onSubmit = async (values) => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-
-            const response = await fetch(`${apiUrl}/api/v1/books/admin/add`, {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-                body: JSON.stringify(values)
-            });
-
+            const response = await post(`${apiUrl}/api/v1/books/admin/add`, values);
             const data = await response.json();
             if (data.success) {
                 // 重置页码到第一页
@@ -142,7 +116,7 @@ export default function BooksManagement() {
                 toast({
                     variant: "destructive",
                     title: "添加失败",
-                    description: data.msg || "请稍后重试",
+                    description: data.message || "请稍后重试",
                 });
             }
         } catch (error) {

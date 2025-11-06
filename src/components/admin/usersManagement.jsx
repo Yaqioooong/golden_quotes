@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { get, post, put } from "@/lib/request";
 import {
     Table,
     TableBody,
@@ -90,95 +91,66 @@ export default function UsersManagement() {
 
     const fetchUsers = async () => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-
-            const searchParams = new URLSearchParams({
-                page: currentPage,
-                pageSize: pageSize
-            });
-            if (searchTerm) {
-                searchParams.append('keyword', searchTerm);
-            }
-
-            const response = await fetch(`${apiUrl}/api/v1/user/admin/list?${searchParams}`, {
-                headers
-            });
-
+            const response = await get(`${apiUrl}/api/v1/users/admin/list?page=${currentPage}&pageSize=${pageSize}${searchTerm ? `&search=${searchTerm}` : ''}`);
             const data = await response.json();
-            if (data.success) {
-                setUsers(data.data.items);
-                setTotalPages(data.data.totalPages);
-            } else {
-                throw new Error(data.message || '获取用户列表失败');
+            if (data.success && data.data) {
+                setUsers(data.data.records || []);
+                setTotalPages(data.data.pages || 1);
             }
         } catch (error) {
             console.error('Error fetching users:', error);
             toast({
                 variant: "destructive",
                 title: "获取用户列表失败",
-                description: error.message || "请稍后重试",
+                description: "请稍后重试",
             });
         }
     };
 
     const onSubmit = async (values) => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-
-            const response = await fetch(`${apiUrl}/gq/api/v1/user/admin/add`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(values)
+            const response = await post(`${apiUrl}/api/v1/users/admin/${editingUser ? 'update' : 'add'}`, {
+                ...values,
+                id: editingUser?.id
             });
 
             const data = await response.json();
             if (data.success) {
-                toast({
-                    title: "操作成功",
-                    description: "用户已添加",
-                });
+                // 重置页码到第一页
+                setCurrentPage(1);
+                // 刷新用户列表
+                fetchUsers();
+
+                // 重置表单并关闭对话框
+                setEditingUser(null);
                 form.reset();
                 setOpen(false);
-                fetchUsers();
+                toast({
+                    title: "操作成功",
+                    description: editingUser ? "用户已更新" : "用户已添加",
+                });
             } else {
-                throw new Error(data.message || '添加用户失败');
+                toast({
+                    variant: "destructive",
+                    title: "操作失败",
+                    description: data.message || "请稍后重试",
+                });
             }
         } catch (error) {
-            console.error('Error adding user:', error);
+            console.error('Error submitting user:', error);
             toast({
                 variant: "destructive",
-                title: "添加失败",
-                description: error.message || "网络错误，请稍后重试",
+                title: "操作失败",
+                description: "网络错误，请稍后重试",
             });
         }
     };
 
     const handleRoleChange = async (userId, newRole) => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-
-            const response = await fetch(`${apiUrl}/api/v1/user/admin/update-role`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({
-                    userId,
-                    role: newRole
-                })
+            const response = await put(`${apiUrl}/api/v1/user/admin/update-role`, {
+                userId,
+                role: newRole
             });
 
             const data = await response.json();
@@ -221,20 +193,9 @@ export default function UsersManagement() {
 
     const handleBanUser = async (userId, isBanned) => {
         try {
-            const tokenName = localStorage.getItem('tokenName');
-            const tokenValue = localStorage.getItem('tokenValue');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            headers[tokenName] = tokenValue;
-    
-            const response = await fetch(`${apiUrl}/api/v1/user/admin/ban`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({
-                    userId,
-                    banned: !isBanned
-                })
+            const response = await put(`${apiUrl}/api/v1/users/admin/ban`, {
+                userId,
+                banned: !isBanned
             });
     
             const data = await response.json();
