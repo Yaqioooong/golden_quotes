@@ -18,14 +18,14 @@ export default function SearchArea({ onSearch }) {
           <Input
             type="text"
             placeholder="书籍名称"
-            className="flex-1"
+            className="flex-1 bg-white/30 backdrop-blur-sm border-black/40 placeholder:text-black/70 text-white focus:bg-white/40 focus:border-white/60 transition-all duration-300"
             value={bookName}
             onChange={(e) => setBookName(e.target.value)}
           />
           <Input
             type="text"
             placeholder="作者名字"
-            className="flex-1"
+            className="flex-1 bg-white/30 backdrop-blur-sm border-black/40 placeholder:text-black/70 text-white focus:bg-white/40 focus:border-white/60 transition-all duration-300"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
           />
