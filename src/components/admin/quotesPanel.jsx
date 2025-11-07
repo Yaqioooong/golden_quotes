@@ -211,6 +211,15 @@ export default function QuotesPanel() {
         }
     };
 
+    const handleEdit = (quote) => {
+        setEditingQuote(quote);
+        form.reset({
+            content: quote.content,
+            srcChapter: quote.srcChapter || ""
+        });
+        setOpen(true);
+    };
+
     const handleDelete = async () => {
         if (!quoteToDelete || !bookId) return;
 
