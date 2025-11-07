@@ -6,7 +6,7 @@ on:
 
 env: # 设置环境变量
   REGISTRY: ${{ secrets.ALI_REGISTRY }} # 从GitHub Secrets中获取镜像仓库地址
-  IMAGE_NAME: ${{ secrets.ALI_REGISTRY }}/aasing_gowk/golden_quotes_front # 替换为你的完整镜像地址
+  IMAGE_NAME: ${{ secrets.ALI_REGISTRY }}/aasing_gwok/golden_quotes_front # 替换为你的完整镜像地址
   IMAGE_TAG: latest # 设置镜像标签为latest
   CONTAINER_NAME: ${{secrets.CONTAINER_NAME}} #oos-cn-shanghai-aasing_gwok-golden-quotes-front
 
@@ -24,7 +24,7 @@ jobs:
 
       - name: Login to Aliyun ACR
         run: |
-          echo "${{ secrets.ALI_PASSWORD }}" | docker login --username ${{ secrets.ALI_USERNAME }} --password-stdin ${{ secrets.ALI_REGISTRY }} # 登录到阿里云ACR[citation:6]
+          echo "${{ secrets.ALI_PASSWORD }}" | docker login --username ${{ secrets.ALI_USERNAME }} --password-stdin ${{ secrets.ALI_REGISTRY }}
 
       - name: Push Docker image
         run: |
