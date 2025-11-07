@@ -1,0 +1,61 @@
+name: Build and Deploy to Aliyun ECS # 工作流的名称
+
+on:
+  push:
+    branches: [ main ] # 指定在推送代码到main分支时触发，可以根据需要修改分支名[citation:10]
+
+env: # 设置环境变量
+  REGISTRY: ${{ secrets.ALI_REGISTRY }} # 从GitHub Secrets中获取镜像仓库地址
+  IMAGE_NAME: ${{ secrets.ALI_REGISTRY }}/aasing_gowk/golden_quotes_front # 替换为你的完整镜像地址
+  IMAGE_TAG: latest # 设置镜像标签为latest
+  CONTAINER_NAME: ${{secrets.CONTAINER_NAME}} #oos-cn-shanghai-aasing_gwok-golden-quotes-front
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-22.04 # 在最新的Ubuntu系统环境中运行[citation:3]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # 检出仓库的代码[citation:3]
+
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_NAME:$IMAGE_TAG . # 使用当前目录的Dockerfile构建镜像[citation:6]
+
+      - name: Login to Aliyun ACR
+        run: |
+          echo "${{ secrets.ALI_PASSWORD }}" | docker login --username ${{ secrets.ALI_USERNAME }} --password-stdin ${{ secrets.ALI_REGISTRY }} # 登录到阿里云ACR[citation:6]
+
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE_NAME:$IMAGE_TAG # 推送构建好的镜像到ACR[citation:6]
+
+  deploy-to-ecs:
+    runs-on: ubuntu-22.04
+    needs: build-and-push # 依赖于build-and-push任务，确保在构建推送完成后执行
+
+    steps:
+      - name: Deploy to ECS via SSH
+        uses: appleboy/ssh-action@v1.0.3 # 使用SSH连接ECS的Action
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USERNAME }}
+          password: ${{ secrets.ECS_PASSWORD }}
+          script: |
+            # 在ECS上执行部署命令
+            echo "Logging into Aliyun ACR..." 
+            echo "${{ secrets.ALI_PASSWORD }}" | sudo docker login --username ${{ secrets.ALI_USERNAME }} --password-stdin ${{ secrets.ALI_REGISTRY }}
+            
+            echo "Pulling the latest Docker image..."
+            sudo docker pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            
+            echo "Stopping and removing old container if exists..."
+            sudo docker stop ${{ env.CONTAINER_NAME }} || true # 停止当前运行的容器，'|| true'确保容器不存在时脚本也不报错
+            sudo docker rm ${{ env.CONTAINER_NAME }} || true   # 移除旧的容器
+            
+            echo "Starting a new container..."
+            # 运行新的容器，根据你的需要调整参数，例如端口映射、环境变量等[citation:2]
+            sudo docker run -d --name ${{ env.CONTAINER_NAME }} -p 80:3000 ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            
+            echo "Clean up unused Docker images..."
+            sudo docker image prune -f
