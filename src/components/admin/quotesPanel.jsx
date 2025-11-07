@@ -1,7 +1,8 @@
 "use client"
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -52,6 +53,7 @@ const formSchema = z.object({
 
 export default function QuotesPanel() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const bookId = searchParams.get('bookId');
     const [quotes, setQuotes] = useState([]);
     const [book, setBook] = useState(null);
@@ -353,6 +355,18 @@ export default function QuotesPanel() {
                             </PaginationContent>
                         </Pagination>
                     </div>
+                </div>
+                
+                {/* 返回按钮 */}
+                <div className="flex justify-center mt-4">
+                    <Button
+                        variant="outline"
+                        onClick={() => router.push('/admin/books')}
+                        className="flex items-center gap-2"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        返回书籍管理
+                    </Button>
                 </div>
             </div>
 
