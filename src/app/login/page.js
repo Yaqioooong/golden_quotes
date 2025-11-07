@@ -18,6 +18,31 @@ export default function LoginPage() {
     const router = useRouter();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
+    useEffect(() => {
+        // 从URL参数获取来源页面，如果没有则使用document.referrer
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromParam = urlParams.get('from');
+        
+        let referrer = fromParam;
+        
+        // 如果没有URL参数，则使用document.referrer
+        if (!referrer) {
+            referrer = document.referrer;
+        }
+        
+        // 如果还是没有来源，则使用当前页面URL
+        if (!referrer) {
+            referrer = window.location.href;
+        }
+        
+        const currentPath = window.location.pathname;
+        
+        // 如果来源页面不是登录页面本身，则保存来源页面
+        if (!referrer.includes(currentPath)) {
+            sessionStorage.setItem('loginReferrer', referrer);
+        }
+    }, []);
+
 
     useEffect(() => {
         const fetchDailyQuote = async () => {
@@ -100,8 +125,15 @@ export default function LoginPage() {
                     localStorage.removeItem('rememberedUsername');
                 }
                 
-                // 登录成功，跳转到管理后台
-                router.push('/admin');
+                // 获取来源页面，如果没有来源页面则跳转到/books
+                const referrer = sessionStorage.getItem('loginReferrer');
+                const redirectUrl = referrer && !referrer.includes('/login') ? referrer : '/books';
+                
+                // 清除保存的来源页面信息
+                sessionStorage.removeItem('loginReferrer');
+                
+                // 登录成功，跳转回来源页面或默认页面
+                router.push(redirectUrl);
             }
 
 

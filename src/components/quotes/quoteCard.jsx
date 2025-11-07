@@ -32,9 +32,10 @@ export default function QuoteCard({ quote, chapter, id, likes: initialLikes, isF
     const toggleFavorite = () => {
         if (!id || isLoading) return;
         
-        // 如果用户未登录，跳转到登录页面
+        // 如果用户未登录，跳转到登录页面并传递当前页面作为来源
         if (!isLoggedIn) {
-            router.push('/login');
+            const currentPath = window.location.pathname + window.location.search;
+            router.push(`/login?from=${encodeURIComponent(currentPath)}`);
             return;
         }
         

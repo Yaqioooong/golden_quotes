@@ -29,7 +29,9 @@ export default function AdminLayout({ children }) {
     setIsLoggedIn(!!(tokenName && tokenValue));
     
     if (!tokenName || !tokenValue) {
-      router.push('/login');
+      // 重定向到登录页面，并传递当前页面作为来源
+      const currentPath = window.location.pathname;
+      router.push(`/login?from=${encodeURIComponent(currentPath)}`);
     }
   }, [router]);
 
