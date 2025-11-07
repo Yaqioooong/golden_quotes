@@ -13,6 +13,9 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# 根据构建参数选择环境配置文件
+ARG ENV_FILE=.env.production
+COPY ${ENV_FILE} .env.local
 RUN npm run build
 
 # 运行阶段
