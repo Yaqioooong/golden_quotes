@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/common/logo';
-import { get } from '@/lib/request';
+import { get, post } from '@/lib/request';
+import { encryptAES } from '@/lib/crypto';
 
 export default function RegisterPage() {
     const [quoteData, setQuoteData] = useState(null);
@@ -60,8 +61,34 @@ export default function RegisterPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (validateForm()) {
-            // TODO: Implement register logic here
-            console.log('Register attempt:', formData);
+            setIsLoading(true);
+            try {
+                const encryptedPassword = encryptAES(formData.password);
+                const response = await post(`${apiUrl}/admin/register`, {
+                    username: formData.username,
+                    password: encryptedPassword,
+                    realName: formData.realName || '',
+                    email: formData.email
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    // 注册成功，跳转到登录页面
+                    alert(result.data || '注册成功！请登录');
+                    router.push('/login');
+                } else {
+                    throw new Error(result.message || '注册失败');
+                }
+            } catch (err) {
+                console.error('注册失败:', err);
+                alert(`注册失败: ${err.message}`);
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
