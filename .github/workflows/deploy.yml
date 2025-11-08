@@ -48,15 +48,14 @@ jobs:
             
             echo "Pulling the latest Docker image..."
             sudo docker pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            
+
             echo "Stopping and removing old container if exists..."
             sudo docker stop ${{ env.CONTAINER_NAME }} || true # 停止当前运行的容器，'|| true'确保容器不存在时脚本也不报错
             sudo docker rm ${{ env.CONTAINER_NAME }} || true   # 移除旧的容器
             
             echo "Starting a new container..."
             # 运行新的容器，传递环境变量
-            sudo docker run -d --name ${{ env.CONTAINER_NAME }} -p 3000 \
-              ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            docker-compose up -d frontend
             
             echo "Clean up unused Docker images..."
             sudo docker image prune -f
